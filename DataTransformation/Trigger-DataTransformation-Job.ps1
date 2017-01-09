@@ -57,6 +57,8 @@ workflow Trigger-DataTransformation-Job
 
     InlineScript {
         $jobParams = $Using:jobParams
+        Write-Output "Input params: "
+        Write-Output $jobParams 
 
         # Load all dependent dlls
         $data = [Reflection.Assembly]::LoadFile("C:\Modules\User\DataTransformationApp\Newtonsoft.Json.dll")

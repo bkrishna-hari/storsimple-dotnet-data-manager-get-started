@@ -161,13 +161,13 @@
                 "description": "The name of the function app in which the function has to be created."
             }
         },
-        "repoURL": {
-            "defaultValue": "https://github.com/bkrishna-hari/StorSimple-Data-Manager-Template.git",
-            "type": "String",
-            "metadata": {
-                "description": "Repo URL"
-            }
-        },
+      "repoURL": {
+        "defaultValue": "https://github.com/Azure-Samples/storsimple-dotnet-data-manager-get-started/tree/master/ARM_Template_for_Data_Manager",
+        "type": "String",
+        "metadata": {
+          "description": "Repo URL"
+        }
+      },
         "branch": {
             "defaultValue": "master",
             "type": "String",

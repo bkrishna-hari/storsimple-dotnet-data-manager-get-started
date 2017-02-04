@@ -1,0 +1,399 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "tenantId": {
+            "type": "String",
+            "metadata": {
+                "group": "Azure Active Directory settings",
+                "description": "The tenant ID (guid) of the Azure Active Directory (AAD) tenant, where the service principal resides."
+            }
+        },
+        "clientId": {
+            "type": "String",
+            "metadata": {
+                "group": "Azure Active Directory settings",
+                "description": "Client ID of AAD app which has permissions to KeyVault"
+            }
+        },
+        "activeDirectoryKey": {
+            "type": "String",
+            "metadata": {
+                "group": "Azure Active Directory settings",
+                "description": "Client Secret of AAD app."
+            }
+        },
+        "dataManagerName": {
+            "type": "String",
+            "metadata": {
+                "group": "Data manager settings",
+                "description": "StorSimple Data Manager name must be between 3 and 24 characters long, start with letter/number and contain lowercase letters, numbers or dash character."
+            }
+        },
+        "dataSourceName": {
+            "type": "String",
+            "metadata": {
+                "group": "Data source settings",
+                "description": "A friendly name that will help you identify the data repo easily. The name store/repository name to be created."
+            }
+        },
+        "dataSinkName": {
+            "type": "String",
+            "metadata": {
+                "group": "Data sink settings",
+                "description": "The name store/repository name to be created or updated. The name store/repository name to be created."
+            }
+        },
+        "resourceId": {
+            "type": "String",
+            "metadata": {
+                "group": "Data source settings",
+                "description": "The first part of the registration key of the your StorSimple manager. Paste the registration key and only keep the first number (before the ':' symbol) in this field."
+            }
+        },
+        "serviceEncryptionKey": {
+            "type": "SecureString",
+            "metadata": {
+                "group": "Data source settings",
+                "description": "The Service Data Encryption Key of your StorSimple manager. This is the key that was generated when the first device was registered in your StorSimple manager."
+            }
+        },
+        "storageAccountName": {
+            "type": "String",
+            "metadata": {
+                "group": "Data sink settings",
+                "description": "The name must be between 3 and 24 characters long and use lowercase letters and numbers only."
+            }
+        },
+        "storageAccountType": {
+            "defaultValue": "Standard_LRS",
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_ZRS",
+                "Premium_LRS"
+            ],
+            "type": "String",
+            "metadata": {
+                "description": "Storage Account type"
+            }
+        },
+        "mediaServiceName": {
+            "type": "String",
+            "metadata": {
+                "group": "Data sink settings",
+                "description": "The name must be between 3 and 24 characters long and use lowercase letters and numbers only."
+            }
+        },
+        "jobDefinitionName": {
+            "type": "String",
+            "metadata": {
+                "group": "Job definition settings",
+                "description": "The name can only contain alpha-numeric characters."
+            }
+        },
+        "deviceName": {
+            "type": "String",
+            "metadata": {
+                "group": "Job definition settings",
+                "description": "The device within StorSimple manager that contains your data. The name can only contain numbers or letters."
+            }
+        },
+        "volumeName": {
+            "type": "String",
+            "metadata": {
+                "group": "Job definition settings",
+                "description": "The name can only contain numbers or letters."
+            }
+        },
+        "rootDirectories": {
+            "defaultValue": "\\",
+            "type": "String",
+            "metadata": {
+                "group": "Job definition settings",
+                "description": "The data can only allow either \\ or specific root directory"
+            }
+        },
+        "fileNameFilter": {
+            "defaultValue": "*",
+            "type": "String",
+            "metadata": {
+                "group": "Job definition settings",
+                "description": "The data can only allow either * or *.* or specific file filter"
+            }
+        },
+        "backupChoice": {
+            "defaultValue": "UseExistingLatest",
+            "allowedValues": [
+                "UseExistingLatest",
+                "TakeNow"
+            ],
+            "type": "String",
+            "metadata": {
+                "group": "Job definition settings",
+                "description": "TakeNow - A cloud snapshot for the specified volume will be taken for this job at runtime. UseExistingLatest - The latest existing copy of the volume on the cloud will be used for this job at runtime."
+            }
+        },
+        "userConfirmation": {
+            "defaultValue": "NotRequired",
+            "allowedValues": [
+                "NotRequired",
+                "Required"
+            ],
+            "type": "String",
+            "metadata": {
+                "group": "Job definition settings",
+                "description": "If you wish to see the estimates of the job (duration & data) before the job starts copying data, choose 'Required' option."
+            }
+        },
+        "isDirectoryMode": {
+            "defaultValue": false,
+            "type": "Bool",
+            "metadata": {
+                "group": "Job definition settings",
+                "description": "If you wish you create multi file media assets that are mapped to the directories in your volume, choose 'true' option."
+            }
+        },
+        "functionAppName": {
+            "type": "String",
+            "metadata": {
+                "group": "Azure function app settings",
+                "description": "The name of the function app in which the function has to be created."
+            }
+        },
+        "repoURL": {
+            "defaultValue": "https://github.com/bkrishna-hari/StorSimple-Data-Manager-Template.git",
+            "type": "String",
+            "metadata": {
+                "description": "Repo URL"
+            }
+        },
+        "branch": {
+            "defaultValue": "master",
+            "type": "String",
+            "metadata": {
+                "description": "Repo branch"
+            }
+        },
+        "manualIntegration": {
+            "defaultValue": true,
+            "type": "Bool",
+            "metadata": {
+                "description": "Use 'true' if you are deploying from the base repo, 'false' if you are deploying from your own fork. If you're using 'false', make sure you have admin permissions to the repo."
+            }
+        }
+    },
+    "variables": {
+        "subscriptionId": "[subscription().subscriptionId]",
+        "createJobDefitionFunctionName": "fnCreateJobDefinition",
+        "triggerQueueMessagesFunctionName": "fnConvertMediaFiles"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "sku": {
+                "name": "[parameters('storageAccountType')]"
+            },
+            "kind": "Storage",
+            "name": "[toLower(parameters('storageAccountName'))]",
+            "apiVersion": "2016-01-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "encryption": {
+                    "services": {
+                        "blob": {
+                            "enabled": "false"
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Media/mediaServices",
+            "name": "[parameters('mediaServiceName')]",
+            "apiVersion": "2015-10-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "storageAccounts": [
+                    {
+                        "isPrimary": true,
+                        "id": "[resourceId('Microsoft.Storage/storageAccounts/', toLower(parameters('storageAccountName')))]"
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', toLower(parameters('storageAccountName')))]"
+            ]
+        },
+        {
+            "type": "Microsoft.HybridData/dataManagers",
+            "sku": {
+                "name": "DS0",
+                "tier": "Standard"
+            },
+            "name": "[parameters('dataManagerName')]",
+            "apiVersion": "2016-06-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', toLower(parameters('storageAccountName')))]",
+                "[concat('Microsoft.Media/mediaServices/', parameters('mediaServiceName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "kind": "functionapp",
+            "name": "[parameters('functionAppName')]",
+            "apiVersion": "2016-03-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "name": "[parameters('functionAppName')]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "AzureWebJobsDashboard",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', toLower(parameters('storageAccountName')),';AccountKey=',listKeys(resourceId(variables('subscriptionId'),resourceGroup().name,'Microsoft.Storage/storageAccounts', toLower(parameters('storageAccountName'))), '2015-05-01-preview').key1)]"
+                        },
+                        {
+                            "name": "AzureWebJobsStorage",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', toLower(parameters('storageAccountName')),';AccountKey=',listKeys(resourceId(variables('subscriptionId'),resourceGroup().name,'Microsoft.Storage/storageAccounts', toLower(parameters('storageAccountName'))), '2015-05-01-preview').key1)]"
+                        },
+                        {
+                            "name": "FUNCTIONS_EXTENSION_VERSION",
+                            "value": "~1"
+                        },
+                        {
+                            "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', toLower(parameters('storageAccountName')),';AccountKey=',listKeys(resourceId(variables('subscriptionId'),resourceGroup().name,'Microsoft.Storage/storageAccounts', toLower(parameters('storageAccountName'))), '2015-05-01-preview').key1)]"
+                        },
+                        {
+                            "name": "WEBSITE_CONTENTSHARE",
+                            "value": "[toLower(parameters('functionAppName'))]"
+                        },
+                        {
+                            "name": "WEBSITE_NODE_DEFAULT_VERSION",
+                            "value": "6.5.0"
+                        },
+                        {
+                            "name": "MEDIA_ACCOUNT_NAME",
+                            "value": "[parameters('mediaServiceName')]"
+                        },
+                        {
+                            "name": "MEDIA_ACCOUNT_KEY",
+                            "value": "[listKeys(resourceId('Microsoft.Media/mediaServices', parameters('mediaServiceName')), '2015-10-01').primaryKey]"
+                        },
+                        {
+                            "name": "[concat(toUpper(parameters('functionAppName')), '_QUEUE_STORAGE')]",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', toLower(parameters('storageAccountName')),';AccountKey=',listKeys(resourceId(variables('subscriptionId'),resourceGroup().name,'Microsoft.Storage/storageAccounts', toLower(parameters('storageAccountName'))), '2015-05-01-preview').key1)]"
+                        },
+                        {
+                            "name": "SUBSCRIPTIONID",
+                            "value": "[variables('subscriptionId')]"
+                        },
+                        {
+                            "name": "TENANTID",
+                            "value": "[parameters('tenantId')]"
+                        },
+                        {
+                            "name": "CLIENTID",
+                            "value": "[parameters('clientId')]"
+                        },
+                        {
+                            "name": "ACTIVEDIRECTORYKEY",
+                            "value": "[parameters('activeDirectoryKey')]"
+                        },
+                        {
+                            "name": "RESOURCEGROUPNAME",
+                            "value": "[resourceGroup().name]"
+                        },
+                        {
+                            "name": "LOCATION",
+                            "value": "[resourceGroup().location]"
+                        },
+                        {
+                            "name": "DATAMANAGERNAME",
+                            "value": "[parameters('dataManagerName')]"
+                        },
+                        {
+                            "name": "DATASOURCENAME",
+                            "value": "[parameters('dataSourceName')]"
+                        },
+                        {
+                            "name": "RESOURCEID",
+                            "value": "[parameters('resourceId')]"
+                        },
+                        {
+                            "name": "SERVICEENCRYPTIONKEY",
+                            "value": "[parameters('serviceEncryptionKey')]"
+                        },
+                        {
+                            "name": "DATASINKNAME",
+                            "value": "[parameters('dataSinkName')]"
+                        },
+                        {
+                            "name": "STORAGEACCOUNTNAME",
+                            "value": "[toLower(parameters('storageAccountName'))]"
+                        },
+                        {
+                            "name": "STORAGEACCOUNTKEY",
+                            "value": "[listKeys(resourceId(variables('subscriptionId'),resourceGroup().name,'Microsoft.Storage/storageAccounts', toLower(parameters('storageAccountName'))), '2015-05-01-preview').key1]"
+                        },
+                        {
+                            "name": "JOBDEFINITIONNAME",
+                            "value": "[parameters('jobDefinitionName')]"
+                        },
+                        {
+                            "name": "DEVICENAME",
+                            "value": "[parameters('deviceName')]"
+                        },
+                        {
+                            "name": "VOLUMENAME",
+                            "value": "[toLower(parameters('volumeName'))]"
+                        },
+                        {
+                            "name": "ROOTDIRECTORIES",
+                            "value": "[parameters('rootDirectories')]"
+                        },
+                        {
+                            "name": "FILENAMEFILTER",
+                            "value": "[parameters('fileNameFilter')]"
+                        },
+                        {
+                            "name": "BACKUPCHOICE",
+                            "value": "[parameters('backupChoice')]"
+                        },
+                        {
+                            "name": "USERCONFIRMATION",
+                            "value": "[parameters('userConfirmation')]"
+                        },
+                        {
+                            "name": "ISDIRECTORYMODE",
+                            "value": "[parameters('isDirectoryMode')]"
+                        }
+                    ]
+                },
+                "clientAffinityEnabled": "false"
+            },
+            "resources": [
+                {
+                    "type": "sourcecontrols",
+                    "name": "web",
+                    "apiVersion": "2015-08-01",
+                    "properties": {
+                        "RepoUrl": "[parameters('repoUrl')]",
+                        "branch": "[parameters('branch')]",
+                        "IsManualIntegration": "[parameters('manualIntegration')]"
+                    },
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites/', parameters('functionAppName'))]"
+                    ]
+                }
+            ],
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', toLower(parameters('storageAccountName')))]",
+                "[concat('Microsoft.Media/mediaServices/', parameters('mediaServiceName'))]",
+                "[concat('Microsoft.HybridData/dataManagers/', parameters('dataManagerName'))]"
+            ]
+        }
+    ]
+}
